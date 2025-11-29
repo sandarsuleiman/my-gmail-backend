@@ -1,41 +1,34 @@
 import nodemailer from 'nodemailer';
 
 export default async function handler(req, res) {
-  if (req.method !== "POST") return res.status(405).json({ error: "POST only" });
+  if (req.method !== "POST") return res.status(405).end();
 
   const { ser, us, emails = [], workerEmail, name } = req.body;
 
-  let finalEmails = [...emails];
-  if (workerEmail) finalEmails.push(workerEmail);
+  let toEmails = [...emails];
+  if (workerEmail) toEmails.push(workerEmail);
 
-  if (finalEmails.length === 0) return res.status(400).json({ error: "No email" });
-
-  // Gmail SMTP transporter (free, bina verify ke kaam karta hai)
   const transporter = nodemailer.createTransporter({
-    service: 'gmail',
+    host: "smtp.gmail.com",
+    port: 465,
+    secure: true,
     auth: {
-      user: process.env.GMAIL_USER,    // ← Tumhara Gmail (Vercel env mein daal dena)
-      pass: process.env.GMAIL_PASS,    // ← Tumhara Gmail app password (neeche bataunga)
+      user: process.env.GMAIL_USER,
+      pass: process.env.GMAIL_PASS,
     },
   });
 
   try {
     await transporter.sendMail({
-      from: process.env.GMAIL_USER,     // Tumhara Gmail
-      to: finalEmails,
+      from: `"Form" <${process.env.GMAIL_USER}>`,
+      to: toEmails.join(", "),
       subject: `New Form - ${name || "Someone"}`,
-      html: `
-        <h2>New Submission!</h2>
-        <p><strong>Name:</strong> ${name}</p>
-        <p><strong>Service:</strong> ${ser}</p>
-        <p><strong>Use:</strong> ${us}</p>
-        <hr>
-        <small>Sent from your website</small>
-      `,
+      html: `<h3>New Submission</h3><p><b>Name:</b> ${name}</p><p><b>Service:</b> ${ser}</p><p><b>Use:</b> ${us}</p>`,
     });
 
     res.status(200).json({ success: true });
   } catch (error) {
+    console.log("Error:", error.message);
     res.status(500).json({ error: error.message });
   }
 }
