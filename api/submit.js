@@ -1,34 +1,46 @@
-import nodemailer from 'nodemailer';
+import nodemailer from "nodemailer";
 
 export default async function handler(req, res) {
-  if (req.method !== "POST") return res.status(405).end();
+  if (req.method !== "POST") {
+    return res.status(405).json({ message: "Only POST allowed" });
+  }
 
-  const { ser, us, emails = [], workerEmail, name } = req.body;
-
-  let toEmails = [...emails];
-  if (workerEmail) toEmails.push(workerEmail);
-
-  const transporter = nodemailer.createTransporter({
-    host: "smtp.gmail.com",
-    port: 465,
-    secure: true,
-    auth: {
-      user: process.env.GMAIL_USER,
-      pass: process.env.GMAIL_PASS,
-    },
-  });
+  const { ser, us, emails, workerEmail, name } = req.body;
 
   try {
-    await transporter.sendMail({
-      from: `"Form" <${process.env.GMAIL_USER}>`,
-      to: toEmails.join(", "),
-      subject: `New Form - ${name || "Someone"}`,
-      html: `<h3>New Submission</h3><p><b>Name:</b> ${name}</p><p><b>Service:</b> ${ser}</p><p><b>Use:</b> ${us}</p>`,
+    const transporter = nodemailer.createTransport({
+      service: "gmail",
+      auth: {
+        user: process.env.EMAIL_USER,
+        pass: process.env.EMAIL_PASS,
+      },
     });
 
-    res.status(200).json({ success: true });
+    const textMessage = `
+New Form Submission:
+
+Name: ${name}
+Ser: ${ser}
+Us: ${us}
+Worker Email: ${workerEmail}
+
+Sent to: ${emails.join(", ")}
+    `;
+
+    // Send email to all emails
+    for (let email of emails) {
+      await transporter.sendMail({
+        from: process.env.EMAIL_USER,
+        to: email,
+        subject: "New Form Submission",
+        text: textMessage,
+      });
+    }
+
+    return res.status(200).json({ success: true, msg: "Emails sent!" });
+
   } catch (error) {
-    console.log("Error:", error.message);
-    res.status(500).json({ error: error.message });
+    console.error(error);
+    return res.status(500).json({ success: false, msg: "Error sending email" });
   }
 }
